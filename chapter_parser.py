@@ -13,8 +13,28 @@ async def _extract_enc_from_page(page: Page) -> str:
             return enc
     except Exception:
         pass
-    # 回退到 config 中的 ENC（来自 Cookie 中 {courseId}enc 的值）
-    return config.ENC
+
+    try:
+        parsed = await page.evaluate("""() => {
+            const params = new URLSearchParams(location.search);
+            return params.get('enc') || '';
+        }""")
+        if parsed:
+            return parsed
+    except Exception:
+        pass
+
+    try:
+        cookies = await page.context.cookies()
+    except Exception:
+        cookies = []
+
+    expected_name = f"{config.COURSE_ID}enc"
+    for cookie in cookies:
+        if cookie.get("name") == expected_name and cookie.get("value"):
+            return cookie["value"]
+
+    return ""
 
 
 async def get_chapters(page: Page) -> tuple[list[dict], str]:

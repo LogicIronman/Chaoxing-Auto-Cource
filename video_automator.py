@@ -35,7 +35,7 @@ async def play_chapter_videos(page: Page, chapter: dict, enc: str = "") -> str:
         f"&clazzid={config.CLAZZ_ID}"
         f"&cpi={config.CPI}"
         f"&ut=s"
-        f"&enc={enc or config.ENC}"
+        f"&enc={enc}"
     )
     await page.goto(chapter_list_url, wait_until="domcontentloaded",
                     timeout=config.PAGE_LOAD_TIMEOUT)

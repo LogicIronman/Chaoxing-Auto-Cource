@@ -1,19 +1,14 @@
-"""超星学习通 - 课程配置
+"""超星学习通 - 运行配置。
 
-使用前请修改 config.json 中的课程信息。
-参数获取方法见 README.md。
+课程参数不写入配置文件，运行时从用户当前打开的课程页面临时识别。
+可选的 config.json 仅用于通用运行参数，例如浏览器用户目录名称和超时。
 """
 
 import json
 import sys
 from pathlib import Path
 
-#
 DEFAULT_CONFIG = {
-    "COURSE_ID": "261791158",
-    "CLAZZ_ID": "142798268",
-    "CPI": "412884755",
-    "ENC": "fce9e004fc2fb027cb8452d3ce629bf2",
     "PROFILE_NAME": "default",
     "MOOC1_DOMAIN": "https://mooc1.chaoxing.com",
     "MOOC2_DOMAIN": "https://mooc2-ans.chaoxing.com",
@@ -39,12 +34,12 @@ def _load_external_config() -> dict:
 _CONFIG = {**DEFAULT_CONFIG, **_load_external_config()}
 
 # ═══════════════════════════════════════════════════════
-# 课程参数（必填，每个课程不同）
+# 课程参数（运行时从当前课程页识别，不持久化保存）
 # ═══════════════════════════════════════════════════════
-COURSE_ID = str(_CONFIG["COURSE_ID"])     # 课程 ID
-CLAZZ_ID = str(_CONFIG["CLAZZ_ID"])       # 班级 ID
-CPI = str(_CONFIG["CPI"])                 # 课程参数 cpi
-ENC = str(_CONFIG["ENC"])                 # 课程级 enc
+COURSE_ID = ""     # 课程 ID
+CLAZZ_ID = ""      # 班级 ID
+CPI = ""           # 课程参数 cpi
+ENC = ""           # 课程级 enc
 PROFILE_NAME = str(_CONFIG["PROFILE_NAME"])  # 浏览器用户目录名称
 
 # ═══════════════════════════════════════════════════════

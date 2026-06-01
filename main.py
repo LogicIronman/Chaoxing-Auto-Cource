@@ -34,6 +34,7 @@ from video_automator import (
 
 async def main():
     force = "--force" in sys.argv
+    _apply_cli_options()
     print("=" * 50)
     print("超星学习通 未完成章节视频静音 2 倍速播放工具")
     if force:
@@ -62,7 +63,7 @@ async def main():
             if not chapters:
                 print("[错误] 未获取到章节列表，请检查：")
                 print("  1. 账号已登录成功")
-                print("  2. 课程 ID 和 enc 参数正确")
+                print("  2. 点击开始时浏览器位于具体课程页面或章节页面")
                 return
 
             # 打印课程完成状况
@@ -115,14 +116,25 @@ def _profile_dir() -> Path:
     return path
 
 
+def _apply_cli_options() -> None:
+    """处理简单命令行参数。"""
+    profile = _arg_value("--profile")
+    if profile:
+        config.PROFILE_NAME = profile
+
+
+def _arg_value(name: str) -> str:
+    for index, arg in enumerate(sys.argv):
+        if arg == name and index + 1 < len(sys.argv):
+            return sys.argv[index + 1]
+        prefix = f"{name}="
+        if arg.startswith(prefix):
+            return arg[len(prefix):]
+    return ""
+
+
 async def _open_course_or_login(page) -> None:
     """打开目标课程；未登录时让用户直接在浏览器里登录。"""
-    # course_url = (
-    #     f"{config.MOOC2_DOMAIN}/mooc2-ans/mycourse/stu"
-    #     f"?courseid={config.COURSE_ID}"
-    #     f"&clazzid={config.CLAZZ_ID}"
-    #     f"&cpi={config.CPI}"
-    # )
     course_url="https://i.chaoxing.com/base?"
     print("[浏览器] 正在打开课程页；如跳转登录，请直接在浏览器中完成登录")
     await page.goto(course_url, wait_until="domcontentloaded", timeout=config.PAGE_LOAD_TIMEOUT)
@@ -185,19 +197,19 @@ async def _find_course_page_and_params(context, preferred_page):
 
     for page in pages:
         params = _course_params_from_url(page.url)
-        if params:
+        if _has_required_course_params(params):
             return page, params
 
         params = await _course_params_from_dom(page)
-        if params:
+        if _has_required_course_params(params):
             return page, params
 
         for frame in page.frames:
             params = _course_params_from_url(frame.url)
-            if params:
+            if _has_required_course_params(params):
                 return page, params
             params = await _course_params_from_dom(frame)
-            if params:
+            if _has_required_course_params(params):
                 return page, params
 
     return preferred_page, {}
@@ -241,8 +253,13 @@ def _course_params_from_url(url: str) -> dict[str, str]:
 
     query = parse_qs(parsed.query)
     course_id = _first(query, "courseid") or _first(query, "courseId")
-    clazz_id = _first(query, "clazzid") or _first(query, "clazzId") or config.CLAZZ_ID
-    cpi = _first(query, "cpi") or config.CPI
+    clazz_id = (
+        _first(query, "clazzid")
+        or _first(query, "clazzId")
+        or _first(query, "classid")
+        or _first(query, "classId")
+    )
+    cpi = _first(query, "cpi")
     if not course_id:
         return {}
 
@@ -269,17 +286,34 @@ async def _course_params_from_dom(page_or_frame) -> dict[str, str]:
         return {}
 
     for value in candidates:
+        value = value.replace("&amp;", "&")
         params = _course_params_from_url(value)
-        if params:
+        if _has_required_course_params(params):
             return params
     return {}
 
 
 def _apply_detected_course_params(params: dict[str, str]) -> None:
     """把用户当前打开的课程参数应用到本次运行。"""
-    config.COURSE_ID = params.get("courseid") or config.COURSE_ID
-    config.CLAZZ_ID = params.get("clazzid") or config.CLAZZ_ID
-    config.CPI = params.get("cpi") or config.CPI
+    required = {
+        "courseid": "courseid",
+        "clazzid": "clazzid/classid",
+        "cpi": "cpi",
+    }
+    missing = [label for key, label in required.items() if not params.get(key)]
+    if missing:
+        print("[错误] 当前页面缺少课程参数: " + ", ".join(missing))
+        print("[提示] 请进入具体课程的章节/课程主页，再点击“开始自动观看”。")
+        sys.exit(1)
+
+    config.COURSE_ID = params["courseid"]
+    config.CLAZZ_ID = params["clazzid"]
+    config.CPI = params["cpi"]
+
+
+def _has_required_course_params(params: dict[str, str]) -> bool:
+    invalid = {"", "undefined", "null", "none"}
+    return all(str(params.get(key, "")).strip().lower() not in invalid for key in ("courseid", "clazzid", "cpi"))
 
 
 def _first(query: dict[str, list[str]], key: str) -> str:
