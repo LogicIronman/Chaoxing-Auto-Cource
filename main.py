@@ -20,6 +20,7 @@ for browser_dir in BUNDLED_BROWSER_DIRS:
         os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(browser_dir))
         break
 
+from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import async_playwright
 
 import config
@@ -44,12 +45,21 @@ async def main():
     async with async_playwright() as p:
         profile_dir = _profile_dir()
         print(f"[启动] 正在启动浏览器，用户目录: {profile_dir}")
-        context = await p.chromium.launch_persistent_context(
-            str(profile_dir),
-            headless=False,
-            viewport={"width": 1280, "height": 720},
-            args=["--disable-blink-features=AutomationControlled"],
-        )
+        try:
+            context = await p.chromium.launch_persistent_context(
+                str(profile_dir),
+                headless=False,
+                viewport={"width": 1280, "height": 720},
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+        except PlaywrightError as exc:
+            if "Executable doesn't exist" in str(exc) or "playwright install" in str(exc):
+                print("[错误] 未找到 Playwright Chromium 浏览器。")
+                print("[解决] 请在当前项目目录运行：")
+                print("  python -m playwright install chromium")
+                print("[提示] 如果使用虚拟环境，请先激活 .venv，或使用 .\\.venv\\Scripts\\python.exe -m playwright install chromium")
+                return
+            raise
 
         try:
             page = context.pages[0] if context.pages else await context.new_page()

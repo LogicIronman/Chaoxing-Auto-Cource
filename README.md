@@ -33,7 +33,7 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # 4. 安装 Playwright Chromium
-playwright install chromium
+python -m playwright install chromium
 ```
 
 ## 配置
