@@ -1,0 +1,15 @@
+.venv/
+.idea/
+.agents/
+__pycache__/
+*.pyc
+*.spec
+
+# Local runtime state. Do not publish user login cookies or course data.
+config.json
+browser-data/
+auth.json
+
+# Build artifacts.
+build/
+dist/
